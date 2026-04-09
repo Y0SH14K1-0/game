@@ -14,51 +14,73 @@ interface GameContextType {
 
 const GameContext = createContext<GameContextType | undefined>(undefined)
 
-// Para este demo, usaremos un ID de usuario fijo si no hay sesión activa.
-// En producción, esto vendría del auth de Supabase.
-const DEMO_USER_ID = "00000000-0000-0000-0000-000000000000"
+// Generador de UUID v4 simple para navegadores que no soportan crypto.randomUUID()
+const generateUUID = () => {
+  return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    const r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+}
 
 export function GameProvider({ children }: { children: ReactNode }) {
   const [balance, setBalance] = useState(0)
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState<string | null>(null)
 
-  // 1. Inicializar sesión y cargar saldo
+  // 1. Inicializar sesión de invitado o Auth
   useEffect(() => {
     const initializeUser = async () => {
       setLoading(true)
       
       try {
-        // Intentar obtener el usuario actual de Supabase Auth
+        let currentId: string | null = null
+
+        // A. Intentar obtener el usuario de Supabase Auth
         const { data: { user } } = await supabase.auth.getUser()
-        const currentId = user?.id || DEMO_USER_ID
+        
+        if (user) {
+          currentId = user.id
+        } else {
+          // B. Buscar ID de Invitado en LocalStorage
+          const storedGuestId = localStorage.getItem('bet_guest_id')
+          if (storedGuestId) {
+            currentId = storedGuestId
+          } else {
+            // C. Generar nuevo UUID si no existe
+            const newGuestId = typeof crypto?.randomUUID === 'function' 
+              ? crypto.randomUUID() 
+              : generateUUID()
+            
+            localStorage.setItem('bet_guest_id', newGuestId)
+            currentId = newGuestId
+            console.log("Nueva cuenta de invitado generada:", currentId)
+          }
+        }
+
         setUserId(currentId)
 
-        // Obtener saldo inicial de la tabla 'players' usando maybeSingle para evitar errores si no existe
+        // Obtener saldo de la tabla 'players'
         const { data, error } = await supabase
           .from('players')
           .select('balance')
           .eq('id', currentId)
           .maybeSingle()
 
-        if (error) {
-          throw error
-        }
+        if (error) throw error
 
         if (!data) {
-          // Si el jugador no existe, lo creamos automáticamente
-          console.log("Nuevo jugador detectado, creando registro...")
+          // Si el jugador no existe (es nuevo), lo creamos
           const { error: insertError } = await supabase
             .from('players')
             .insert({ 
               id: currentId, 
-              username: 'DemoPlayer', 
+              username: `Guest_${currentId.substring(0, 5)}`, 
               balance: 10000 
             })
 
           if (insertError) {
-            console.error("Error creando jugador:", insertError.message)
-            setBalance(10000) // Fallback local
+            console.error("Error al registrar nuevo invitado:", insertError.message)
+            setBalance(10000)
           } else {
             setBalance(10000)
           }
@@ -67,7 +89,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
         }
       } catch (err: any) {
         console.error("Error en initializeUser:", err.message)
-        setBalance(10000) // Fallback de emergencia
+        setBalance(10000)
       } finally {
         setLoading(false)
       }
@@ -76,7 +98,7 @@ export function GameProvider({ children }: { children: ReactNode }) {
     initializeUser()
   }, [])
 
-  // 2. Suscribirse a cambios en tiempo real del saldo
+  // 2. Suscribirse a cambios en tiempo real
   useEffect(() => {
     if (!userId) return
 
@@ -91,7 +113,6 @@ export function GameProvider({ children }: { children: ReactNode }) {
           filter: `id=eq.${userId}`
         },
         (payload) => {
-          console.log("Saldo actualizado en tiempo real:", payload.new.balance)
           setBalance(payload.new.balance)
         }
       )
@@ -102,47 +123,31 @@ export function GameProvider({ children }: { children: ReactNode }) {
     }
   }, [userId])
 
-  // 3. Métodos de actualización (Autoritativos)
-  // Nota: Estos métodos ahora interactúan con la base de datos
   const addBalance = useCallback(async (amount: number) => {
     if (!userId) return
-    
-    // Llamamos a la función RPC que definimos en el backend
     const { error } = await supabase.rpc('increment_balance', { 
       user_id: userId, 
       amount: amount 
     })
-
     if (error) console.error("Error al añadir saldo:", error.message)
   }, [userId])
 
   const subtractBalance = useCallback(async (amount: number) => {
     if (!userId || balance < amount) return false
-
-    // En un sistema autoritativo, restamos saldo insertando una apuesta
-    // o llamando a un RPC que valide el saldo antes de restar.
     const { error } = await supabase.rpc('decrement_balance', { 
       user_id: userId, 
       amount: amount 
     })
-
     if (error) {
       console.error("Error al restar saldo:", error.message)
       return false
     }
-    
-    // El balance se actualizará automáticamente mediante el Realtime
     return true
   }, [userId, balance])
 
   const resetBalance = useCallback(async () => {
     if (!userId) return
-    const { error } = await supabase
-      .from('players')
-      .update({ balance: 10000 })
-      .eq('id', userId)
-
-    if (error) console.error("Error al resetear saldo:", error.message)
+    await supabase.from('players').update({ balance: 10000 }).eq('id', userId)
   }, [userId])
 
   return (
