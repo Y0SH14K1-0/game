@@ -1,7 +1,9 @@
 import type { Metadata } from 'next'
 import { Inter, Space_Grotesk } from 'next/font/google'
-import { Analytics } from '@vercel/analytics/next'
+import { Analytics } from '@vercel.analytics/next'
+import Script from 'next/script'
 import './globals.css'
+
 
 const inter = Inter({ 
   subsets: ["latin"],
@@ -46,6 +48,10 @@ export default function RootLayout({
       <body className={`${inter.variable} ${spaceGrotesk.variable} font-sans antialiased`}>
         {children}
         {process.env.NODE_ENV === 'production' && <Analytics />}
+        <Script 
+          src="https://pl29102122.profitablecpmratenetwork.com/3f/d1/5a/3fd15a98248ff129208fb97717650d0a.js" 
+          strategy="afterInteractive" 
+        />
       </body>
     </html>
   )

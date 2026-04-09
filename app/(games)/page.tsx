@@ -59,12 +59,12 @@ export default function HomePage() {
     <div className="container py-8">
       {/* Top Ad Banner - Desktop */}
       <AdContainer className="hidden md:flex">
-        <AdBanner size="leaderboard" />
+        <AdBanner id="0ba8001b03d69eaa1902dfcef04db20b" width={728} height={90} />
       </AdContainer>
       
       {/* Top Ad Banner - Mobile */}
       <AdContainer className="md:hidden">
-        <AdBanner size="mobile" />
+        <AdBanner id="839335f6bdfb5a8bd818b5b14e683ae4" width={300} height={250} />
       </AdContainer>
 
       {/* Hero Section */}
@@ -116,7 +116,7 @@ export default function HomePage() {
 
       {/* Mid-page Ad Banner - Desktop */}
       <AdContainer className="hidden md:flex">
-        <AdBanner size="leaderboard" />
+        <AdBanner id="0ba8001b03d69eaa1902dfcef04db20b" width={728} height={90} />
       </AdContainer>
 
       {/* Games Grid */}
@@ -150,11 +150,11 @@ export default function HomePage() {
 
       {/* Bottom Ad Banner */}
       <AdContainer className="hidden md:flex">
-        <AdBanner size="leaderboard" />
+        <AdBanner id="0ba8001b03d69eaa1902dfcef04db20b" width={728} height={90} />
       </AdContainer>
       
       <AdContainer className="md:hidden">
-        <AdBanner size="mobile" />
+        <AdBanner id="839335f6bdfb5a8bd818b5b14e683ae4" width={300} height={250} />
       </AdContainer>
 
       {/* Disclaimer */}
