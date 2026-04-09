@@ -1,0 +1,6 @@
+# Ignorar el entorno virtual (pesa mucho)
+venv/
+__pycache__/
+
+# IGNORAR VARIABLES DE ENTORNO (CRÍTICO)
+.env
