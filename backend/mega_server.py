@@ -3,6 +3,8 @@ import os
 import random
 import math
 import time
+import threading
+from http.server import BaseHTTPRequestHandler, HTTPServer
 from datetime import datetime
 from dotenv import load_dotenv
 from supabase import create_client, Client
@@ -10,6 +12,28 @@ from supabase import create_client, Client
 # Cargar variables de entorno
 load_dotenv()
 
+# --- SERVIDOR WEB FANTASMA PARA RENDER (Anti-Timeout) ---
+class HealthCheckHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b"El motor del casino esta activo")
+
+    def log_message(self, format, *args):
+        return # Silenciar logs del servidor web para no ensuciar la consola
+
+def run_phantom_server():
+    port = int(os.environ.get('PORT', 10000))
+    server_address = ('0.0.0.0', port)
+    httpd = HTTPServer(server_address, HealthCheckHandler)
+    print(f"🌐 Servidor fantasma activo en puerto {port} (Render Health Check)")
+    httpd.serve_forever()
+
+# Iniciar servidor en un hilo secundario (daemon=True para que muera con el proceso principal)
+threading.Thread(target=run_phantom_server, daemon=True).start()
+
+# --- CONFIGURACIÓN DE SUPABASE ---
 SUPABASE_URL = os.getenv("SUPABASE_URL")
 SUPABASE_SERVICE_KEY = os.getenv("SUPABASE_SERVICE_KEY")
 
